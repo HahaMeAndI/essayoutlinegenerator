@@ -129,6 +129,7 @@
             background-color: #1e8e3e;
         }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body>
 
@@ -195,7 +196,7 @@
             const outline = data.candidates[0].content.parts[0].text;
             
             // 3. Update the UI with the clean text
-            resultDiv.textContent = outline.trim();
+            resultDiv.innerHTML = marked.parse(outline.trim());
             resultDiv.style.display = 'block';
             copyButton.style.display = 'block';
 
