@@ -152,84 +152,79 @@
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const outlineForm = document.getElementById('outlineForm');
-            const topicInput = document.getElementById('topic');
-            const resultDiv = document.getElementById('result');
-            const loader = document.getElementById('loader');
-            const generateBtn = document.getElementById('generateBtn');
-            const copyButton = document.getElementById('copyButton');
+        const form = document.getElementById('outline-form');
+    const topicInput = document.getElementById('topic-input');
+    const outlineOutput = document.getElementById('outline-output');
+    const generateButton = document.getElementById('generate-btn');
+    const copyButton = document.getElementById('copy-btn');
 
-            outlineForm.addEventListener('submit', async (event) => {
-                event.preventDefault(); // Stop the form from submitting the old-fashioned way
+    form.addEventListener('submit', async function (event) {
+        event.preventDefault();
+        
+        const topic = topicInput.value.trim();
+        if (!topic) {
+            alert('Please enter a topic.');
+            return;
+        }
 
-                const topic = topicInput.value;
-                
-                if (!topic) {
-                    alert('Please enter a topic for your essay!');
-                    return;
-                }
+        // --- UI Changes for Loading State ---
+        generateButton.disabled = true;
+        generateButton.textContent = 'Generating...';
+        outlineOutput.value = 'Please wait, the AI is thinking...';
 
-                // Show loader and disable button
-                loader.style.display = 'block';
-                generateBtn.disabled = true;
-                generateBtn.textContent = 'Generating...';
-                resultDiv.style.display = 'none';
-                copyButton.style.display = 'none';
-
-                try {
-                    // This is the NEW part. We call our OWN function at /generate-outline.
-                    // The name comes from the filename: generate-outline.js -> /generate-outline
-                    const response = await fetch('/generate-outline', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        // We only need to send the topic. The server handles the rest.
-                        body: JSON.stringify({ topic: topic })
-                    });
-
-                    const data = await response.json();
-
-                    if (!response.ok) {
-                        // This will show an error if our function had a problem.
-                        throw new Error(data.error || `Server Error: ${response.status}`);
-                    }
-                    
-                    // The backend now sends a simple object: { outline: "the text..." }
-                    const outlineText = data.outline;
-                    
-                    resultDiv.textContent = outlineText;
-                    resultDiv.style.display = 'block';
-                    copyButton.style.display = 'block';
-
-                } catch (error) {
-                    console.error("Error:", error);
-                    resultDiv.textContent = `Oops! Something went wrong. Please try again.\n\nError details: ${error.message}`;
-                    resultDiv.style.display = 'block';
-                } finally {
-                    // Hide loader and re-enable button
-                    loader.style.display = 'none';
-                    generateBtn.disabled = false;
-                    generateBtn.textContent = 'Generate Outline';
-                }
+        try {
+            // --- The Fetch Call ---
+            const response = await fetch('/generate-outline', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ topic })
             });
             
-            // Add functionality to the copy button (this part is unchanged)
-            copyButton.addEventListener('click', () => {
-                navigator.clipboard.writeText(resultDiv.textContent)
-                    .then(() => {
-                        copyButton.textContent = 'Copied!';
-                        setTimeout(() => {
-                            copyButton.textContent = 'Copy Outline';
-                        }, 2000); // Reset text after 2 seconds
-                    })
-                    .catch(err => {
-                        console.error('Failed to copy text: ', err);
-                        alert('Could not copy text.');
-                    });
-            });
+            // --- Debugging Step 1: Log the response object ---
+            console.log('Response from server:', response);
+
+            if (!response.ok) {
+                // If the server responded with an error (like 500)
+                const errorText = await response.text();
+                console.error('Server returned an error:', response.status, errorText);
+                throw new Error(`Server error: ${response.status}. See console for details.`);
+            }
+
+            const outline = await response.text();
+
+            // --- Debugging Step 2: Log the final outline text ---
+            console.log('Received outline text:', outline);
+
+            // --- Update the UI with the result ---
+            outlineOutput.value = outline.trim();
+
+        } catch (error) {
+            // --- Catch any network errors or errors from the 'throw' above ---
+            console.error('An error occurred:', error);
+            outlineOutput.value = `An error occurred. Please check the browser console (press F12) for more details.`;
+        
+        } finally {
+            // --- Reset the button regardless of success or failure ---
+            generateButton.disabled = false;
+            generateButton.textContent = 'Generate Outline';
+        }
+    });
+
+    copyButton.addEventListener('click', function () {
+        if (!outlineOutput.value) return;
+        
+        navigator.clipboard.writeText(outlineOutput.value).then(() => {
+            copyButton.textContent = 'Copied!';
+            setTimeout(() => {
+                copyButton.textContent = 'Copy Outline';
+            }, 2000);
+        }).catch(err => {
+            console.error('Failed to copy text: ', err);
+            alert('Failed to copy text.');
         });
+    });
     </script>
 </body>
 </html>
