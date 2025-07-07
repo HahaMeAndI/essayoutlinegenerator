@@ -151,8 +151,7 @@
 
     </div>
 
-   <script>
-    // Correctly select elements using the IDs from YOUR HTML
+  <script>
     const form = document.getElementById('outlineForm');
     const topicInput = document.getElementById('topic');
     const resultDiv = document.getElementById('result');
@@ -160,9 +159,8 @@
     const copyButton = document.getElementById('copyButton');
     const loader = document.getElementById('loader');
 
-    // Attach the event listener directly to the button
     generateButton.addEventListener('click', async function (event) {
-        event.preventDefault(); // Prevent the form from reloading the page
+        event.preventDefault();
         
         const topic = topicInput.value.trim();
         if (!topic) {
@@ -170,12 +168,11 @@
             return;
         }
 
-        // --- Update UI to show loading state ---
         generateButton.disabled = true;
         generateButton.textContent = 'Generating...';
-        loader.style.display = 'block'; // Show the spinning loader
-        resultDiv.style.display = 'none'; // Hide previous results
-        copyButton.style.display = 'none'; // Hide the copy button
+        loader.style.display = 'block';
+        resultDiv.style.display = 'none';
+        copyButton.style.display = 'none';
         
         try {
             const response = await fetch('/generate-outline', {
@@ -188,33 +185,32 @@
 
             if (!response.ok) {
                 const errorText = await response.text();
-                // Create a more user-friendly error message
                 throw new Error(`The server returned an error. Please try again later. (Status: ${response.status})`);
             }
 
-            const outline = await response.text();
+            // 1. Tell the browser to parse the response as JSON
+            const data = await response.json();
             
-            // --- Update the UI with the final result ---
-            // Use .textContent because 'resultDiv' is a <div>, not an <input> or <textarea>
+            // 2. Navigate through the JSON structure to get the clean text
+            const outline = data.candidates[0].content.parts[0].text;
+            
+            // 3. Update the UI with the clean text
             resultDiv.textContent = outline.trim();
-            resultDiv.style.display = 'block'; // Make the result div visible
-            copyButton.style.display = 'block'; // Make the copy button visible
+            resultDiv.style.display = 'block';
+            copyButton.style.display = 'block';
 
         } catch (error) {
             console.error('An error occurred:', error);
-            // Display the error in the result area for the user to see
             resultDiv.textContent = error.message;
             resultDiv.style.display = 'block';
         
         } finally {
-            // --- Reset the UI regardless of success or failure ---
             generateButton.disabled = false;
             generateButton.textContent = 'Generate Outline';
-            loader.style.display = 'none'; // Hide the loader
+            loader.style.display = 'none';
         }
     });
 
-    // The copy button listener
     copyButton.addEventListener('click', function () {
         if (!resultDiv.textContent) return;
         
