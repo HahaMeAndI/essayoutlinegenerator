@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Essay Outline Helper</title>
+    <style>
+        /* A little bit of styling to make it look friendly and clean for students */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f0f4f8;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        h1 {
+            color: #1a73e8;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        p.instructions {
+            text-align: center;
+            color: #5f6368;
+            margin-bottom: 25px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #202124;
+        }
+
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #dfe1e5;
+            border-radius: 8px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+
+        input[type="text"]:focus, input[type="password"]:focus {
+            outline: none;
+            border-color: #1a73e8;
+            box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
+        }
+        
+        #apiKeySection {
+            background-color: #e8f0fe;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        #apiKeySection p {
+            font-size: 14px;
+            line-height: 1.5;
+            color: #444;
+        }
+
+        button {
+            background-color: #1a73e8;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+
+        button:hover {
+            background-color: #185abc;
+        }
+        
+        button:active {
+            transform: scale(0.98);
+        }
+        
+        button:disabled {
+            background-color: #9fbfdf;
+            cursor: not-allowed;
+        }
+
+        .loader {
+            display: none;
+            margin: 20px auto;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #1a73e8;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        #result {
+            margin-top: 25px;
+            padding: 20px;
+            border: 1px solid #dfe1e5;
+            border-radius: 8px;
+            background-color: #f8f9fa;
+            white-space: pre-wrap; /* This preserves line breaks from the AI */
+            line-height: 1.6;
+            display: none; /* Hidden until there's content */
+        }
+        
+        #copyButton {
+            display: none; /* Hidden by default */
+            margin-top: 15px;
+            background-color: #34a853;
+        }
+        
+        #copyButton:hover {
+            background-color: #1e8e3e;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Essay Outline Helper</h1>
+        <p class="instructions">Just enter your essay topic below and get a great starting outline!</p>
+
+        <div id="apiKeySection">
+             <div class="form-group">
+                <label for="apiKey">Your Google Gemini API Key</label>
+                <input type="password" id="apiKey" placeholder="Paste your API key here">
+             </div>
+            <p><strong>Heads up!</strong> This tool needs a free API Key from Google AI Studio to work. Don't worry, your key is saved only on your computer and is not shared. <a href="https://makersuite.google.com/app/apikey" target="_blank">Click here to get your key</a>, then paste it above.</p>
+        </div>
+
+        <form id="outlineForm">
+            <div class="form-group">
+                <label for="topic">What is your essay topic?</label>
+                <input type="text" id="topic" placeholder="e.g., 'The importance of recycling'" required>
+            </div>
+            <button type="submit" id="generateBtn">Generate Outline</button>
+        </form>
+
+        <div class="loader" id="loader"></div>
+        
+        <div id="result"></div>
+        <button id="copyButton">Copy Outline</button>
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const outlineForm = document.getElementById('outlineForm');
+            const topicInput = document.getElementById('topic');
+            const resultDiv = document.getElementById('result');
+            const loader = document.getElementById('loader');
+            const generateBtn = document.getElementById('generateBtn');
+            const apiKeyInput = document.getElementById('apiKey');
+            const copyButton = document.getElementById('copyButton');
+
+            // Load saved API key from browser's local storage
+            const savedApiKey = localStorage.getItem('geminiApiKey');
+            if (savedApiKey) {
+                apiKeyInput.value = savedApiKey;
+            }
+
+            // Save API key to local storage whenever it changes
+            apiKeyInput.addEventListener('input', () => {
+                localStorage.setItem('geminiApiKey', apiKeyInput.value);
+            });
+
+            outlineForm.addEventListener('submit', async (event) => {
+                event.preventDefault(); // Stop the form from submitting the old-fashioned way
+
+                const topic = topicInput.value;
+                const apiKey = apiKeyInput.value;
+
+                if (!apiKey) {
+                    alert('Please enter your Google Gemini API Key first!');
+                    return;
+                }
+                
+                if (!topic) {
+                    alert('Please enter a topic for your essay!');
+                    return;
+                }
+
+                // Show loader and disable button
+                loader.style.display = 'block';
+                generateBtn.disabled = true;
+                generateBtn.textContent = 'Generating...';
+                resultDiv.style.display = 'none';
+                copyButton.style.display = 'none';
+
+                // This is the prompt we send to the AI. It's designed to get a good result for students.
+                const prompt = `
+                    You are a helpful English writing assistant for a student in middle school (grades 7-9).
+                    Generate a clear, structured, 4-paragraph essay outline for the following topic: "${topic}".
+
+                    The outline must include:
+                    1.  **Introduction:** Start with a "hook" to grab the reader's attention, provide some brief background, and end with a clear thesis statement.
+                    2.  **Body Paragraph 1:** A clear topic sentence and 2-3 supporting points with examples.
+                    3.  **Body Paragraph 2:** A clear topic sentence and 2-3 supporting points with examples.
+                    4.  **Body Paragraph 3:** A clear topic sentence and 2-3 supporting points with examples.
+                    5.  **Conclusion:** Restate the thesis in a new way, summarize the main points, and end with a final concluding thought or call to action.
+
+                    Format the output using clear headings and bullet points. Do not add any introductory or concluding text outside of the outline itself.
+                `;
+
+                try {
+                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${apiKey}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            contents: [{
+                                parts: [{
+                                    text: prompt
+                                }]
+                            }]
+                        })
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error.message || `API Error: ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    const outlineText = data.candidates[0].content.parts[0].text;
+                    
+                    resultDiv.textContent = outlineText;
+                    resultDiv.style.display = 'block';
+                    copyButton.style.display = 'block'; // Show the copy button
+
+                } catch (error) {
+                    console.error("Error:", error);
+                    resultDiv.textContent = `Oops! Something went wrong. Please check a few things:\n1. Is your API key correct?\n2. Is your internet connection working?\n\nError details: ${error.message}`;
+                    resultDiv.style.display = 'block';
+                } finally {
+                    // Hide loader and re-enable button
+                    loader.style.display = 'none';
+                    generateBtn.disabled = false;
+                    generateBtn.textContent = 'Generate Outline';
+                }
+            });
+            
+            // Add functionality to the copy button
+            copyButton.addEventListener('click', () => {
+                navigator.clipboard.writeText(resultDiv.textContent)
+                    .then(() => {
+                        copyButton.textContent = 'Copied!';
+                        setTimeout(() => {
+                            copyButton.textContent = 'Copy Outline';
+                        }, 2000); // Reset text after 2 seconds
+                    })
+                    .catch(err => {
+                        console.error('Failed to copy text: ', err);
+                        alert('Could not copy text.');
+                    });
+            });
+        });
+    </script>
+</body>
+</html>
