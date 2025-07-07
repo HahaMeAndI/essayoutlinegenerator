@@ -152,79 +152,84 @@
     </div>
 
     <script>
-        const form = document.getElementById('outline-form');
+    // This message should appear in the console as soon as the page loads.
+    console.log("Page script loaded. Attempting to find elements...");
+
+    const form = document.getElementById('outline-form');
     const topicInput = document.getElementById('topic-input');
     const outlineOutput = document.getElementById('outline-output');
     const generateButton = document.getElementById('generate-btn');
     const copyButton = document.getElementById('copy-btn');
-
-    form.addEventListener('submit', async function (event) {
-        event.preventDefault();
+    
+    // Check if we found the button successfully
+    if (generateButton) {
+        console.log("Successfully found the 'Generate Outline' button.");
         
-        const topic = topicInput.value.trim();
-        if (!topic) {
-            alert('Please enter a topic.');
-            return;
-        }
+        // ATTACH THE EVENT LISTENER DIRECTLY TO THE BUTTON
+        generateButton.addEventListener('click', async function (event) {
+            // This message should appear the moment you click the button
+            console.log("Generate button was CLICKED!");
 
-        // --- UI Changes for Loading State ---
-        generateButton.disabled = true;
-        generateButton.textContent = 'Generating...';
-        outlineOutput.value = 'Please wait, the AI is thinking...';
-
-        try {
-            // --- The Fetch Call ---
-            const response = await fetch('/generate-outline', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ topic })
-            });
+            event.preventDefault(); // Prevent default form submission behavior
             
-            // --- Debugging Step 1: Log the response object ---
-            console.log('Response from server:', response);
-
-            if (!response.ok) {
-                // If the server responded with an error (like 500)
-                const errorText = await response.text();
-                console.error('Server returned an error:', response.status, errorText);
-                throw new Error(`Server error: ${response.status}. See console for details.`);
+            const topic = topicInput.value.trim();
+            if (!topic) {
+                alert('Please enter a topic.');
+                return;
             }
 
-            const outline = await response.text();
+            generateButton.disabled = true;
+            generateButton.textContent = 'Generating...';
+            outlineOutput.value = 'Please wait, the AI is thinking...';
 
-            // --- Debugging Step 2: Log the final outline text ---
-            console.log('Received outline text:', outline);
+            try {
+                const response = await fetch('/generate-outline', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ topic })
+                });
+                
+                console.log('Received response object from server:', response);
 
-            // --- Update the UI with the result ---
-            outlineOutput.value = outline.trim();
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Server returned an error:', response.status, errorText);
+                    throw new Error(`Server error: ${response.status}.`);
+                }
 
-        } catch (error) {
-            // --- Catch any network errors or errors from the 'throw' above ---
-            console.error('An error occurred:', error);
-            outlineOutput.value = `An error occurred. Please check the browser console (press F12) for more details.`;
-        
-        } finally {
-            // --- Reset the button regardless of success or failure ---
-            generateButton.disabled = false;
-            generateButton.textContent = 'Generate Outline';
-        }
-    });
+                const outline = await response.text();
+                console.log('Received outline text:', outline);
+                outlineOutput.value = outline.trim();
 
-    copyButton.addEventListener('click', function () {
-        if (!outlineOutput.value) return;
-        
-        navigator.clipboard.writeText(outlineOutput.value).then(() => {
-            copyButton.textContent = 'Copied!';
-            setTimeout(() => {
-                copyButton.textContent = 'Copy Outline';
-            }, 2000);
-        }).catch(err => {
-            console.error('Failed to copy text: ', err);
-            alert('Failed to copy text.');
+            } catch (error) {
+                console.error('An error occurred during the fetch process:', error);
+                outlineOutput.value = `An error occurred. Please check the browser console (F12) for details.`;
+            
+            } finally {
+                generateButton.disabled = false;
+                generateButton.textContent = 'Generate Outline';
+            }
         });
-    });
+
+    } else {
+        // This will tell us if the script couldn't find the button
+        console.error("CRITICAL ERROR: Could not find the element with id='generate-btn'. Check your HTML.");
+    }
+
+    // The copy button listener remains the same
+    if (copyButton) {
+        copyButton.addEventListener('click', function () {
+            if (!outlineOutput.value) return;
+            navigator.clipboard.writeText(outlineOutput.value).then(() => {
+                copyButton.textContent = 'Copied!';
+                setTimeout(() => { copyButton.textContent = 'Copy Outline'; }, 2000);
+            }).catch(err => console.error('Failed to copy text: ', err));
+        });
+    } else {
+        console.error("CRITICAL ERROR: Could not find the element with id='copy-btn'. Check your HTML.");
+    }
     </script>
 </body>
 </html>
