@@ -151,85 +151,83 @@
 
     </div>
 
-    <script>
-    // This message should appear in the console as soon as the page loads.
-    console.log("Page script loaded. Attempting to find elements...");
+   <script>
+    // Correctly select elements using the IDs from YOUR HTML
+    const form = document.getElementById('outlineForm');
+    const topicInput = document.getElementById('topic');
+    const resultDiv = document.getElementById('result');
+    const generateButton = document.getElementById('generateBtn');
+    const copyButton = document.getElementById('copyButton');
+    const loader = document.getElementById('loader');
 
-    const form = document.getElementById('outline-form');
-    const topicInput = document.getElementById('topic-input');
-    const outlineOutput = document.getElementById('outline-output');
-    const generateButton = document.getElementById('generate-btn');
-    const copyButton = document.getElementById('copy-btn');
-    
-    // Check if we found the button successfully
-    if (generateButton) {
-        console.log("Successfully found the 'Generate Outline' button.");
+    // Attach the event listener directly to the button
+    generateButton.addEventListener('click', async function (event) {
+        event.preventDefault(); // Prevent the form from reloading the page
         
-        // ATTACH THE EVENT LISTENER DIRECTLY TO THE BUTTON
-        generateButton.addEventListener('click', async function (event) {
-            // This message should appear the moment you click the button
-            console.log("Generate button was CLICKED!");
+        const topic = topicInput.value.trim();
+        if (!topic) {
+            alert('Please enter a topic.');
+            return;
+        }
 
-            event.preventDefault(); // Prevent default form submission behavior
-            
-            const topic = topicInput.value.trim();
-            if (!topic) {
-                alert('Please enter a topic.');
-                return;
+        // --- Update UI to show loading state ---
+        generateButton.disabled = true;
+        generateButton.textContent = 'Generating...';
+        loader.style.display = 'block'; // Show the spinning loader
+        resultDiv.style.display = 'none'; // Hide previous results
+        copyButton.style.display = 'none'; // Hide the copy button
+        
+        try {
+            const response = await fetch('/generate-outline', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ topic })
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                // Create a more user-friendly error message
+                throw new Error(`The server returned an error. Please try again later. (Status: ${response.status})`);
             }
 
-            generateButton.disabled = true;
-            generateButton.textContent = 'Generating...';
-            outlineOutput.value = 'Please wait, the AI is thinking...';
-
-            try {
-                const response = await fetch('/generate-outline', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ topic })
-                });
-                
-                console.log('Received response object from server:', response);
-
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error('Server returned an error:', response.status, errorText);
-                    throw new Error(`Server error: ${response.status}.`);
-                }
-
-                const outline = await response.text();
-                console.log('Received outline text:', outline);
-                outlineOutput.value = outline.trim();
-
-            } catch (error) {
-                console.error('An error occurred during the fetch process:', error);
-                outlineOutput.value = `An error occurred. Please check the browser console (F12) for details.`;
+            const outline = await response.text();
             
-            } finally {
-                generateButton.disabled = false;
-                generateButton.textContent = 'Generate Outline';
-            }
-        });
+            // --- Update the UI with the final result ---
+            // Use .textContent because 'resultDiv' is a <div>, not an <input> or <textarea>
+            resultDiv.textContent = outline.trim();
+            resultDiv.style.display = 'block'; // Make the result div visible
+            copyButton.style.display = 'block'; // Make the copy button visible
 
-    } else {
-        // This will tell us if the script couldn't find the button
-        console.error("CRITICAL ERROR: Could not find the element with id='generate-btn'. Check your HTML.");
-    }
+        } catch (error) {
+            console.error('An error occurred:', error);
+            // Display the error in the result area for the user to see
+            resultDiv.textContent = error.message;
+            resultDiv.style.display = 'block';
+        
+        } finally {
+            // --- Reset the UI regardless of success or failure ---
+            generateButton.disabled = false;
+            generateButton.textContent = 'Generate Outline';
+            loader.style.display = 'none'; // Hide the loader
+        }
+    });
 
-    // The copy button listener remains the same
-    if (copyButton) {
-        copyButton.addEventListener('click', function () {
-            if (!outlineOutput.value) return;
-            navigator.clipboard.writeText(outlineOutput.value).then(() => {
-                copyButton.textContent = 'Copied!';
-                setTimeout(() => { copyButton.textContent = 'Copy Outline'; }, 2000);
-            }).catch(err => console.error('Failed to copy text: ', err));
+    // The copy button listener
+    copyButton.addEventListener('click', function () {
+        if (!resultDiv.textContent) return;
+        
+        navigator.clipboard.writeText(resultDiv.textContent).then(() => {
+            copyButton.textContent = 'Copied!';
+            setTimeout(() => {
+                copyButton.textContent = 'Copy Outline';
+            }, 2000);
+        }).catch(err => {
+            console.error('Failed to copy text: ', err);
+            alert('Failed to copy text.');
         });
-    } else {
-        console.error("CRITICAL ERROR: Could not find the element with id='copy-btn'. Check your HTML.");
-    }
-    </script>
+    });
+</script>
 </body>
 </html>
