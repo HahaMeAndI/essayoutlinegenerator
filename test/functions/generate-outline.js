@@ -20,7 +20,7 @@ export async function onRequest(context) {
         const GEMINI_API_KEY = context.env.GEMINI_API_KEY;
 
         // 4. Create the detailed prompt for the AI
-        const prompt = `You are a helpful English writing assistant for a student in middle school (grades 7-9). Generate a clear, structured, 5-paragraph essay outline for the following topic: "${topic}". The outline must include an introduction with a hook and thesis, three body paragraphs with topic sentences and supporting points, and a conclusion. Format the output using clear headings and bullet points.`;
+        const prompt = `You are a helpful English writing assistant for a student in middle school (grades 7-9). Generate a clear, structured, 4-paragraph essay outline for the following topic: "${topic}". The outline must include an introduction with a hook and thesis, three body paragraphs with topic sentences and supporting points, and a conclusion. Format the output using clear headings and bullet points.`;
 
         // 5. Call the Google Gemini API (server-to-server)
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${GEMINI_API_KEY}`, {
